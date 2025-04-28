@@ -18,8 +18,6 @@ end
 # フレームごとに分割
 frames = shots.each_slice(2).to_a
 
-# p frames
-
 # 合計計算
 point = 0
 # ボウリングは必ず10フレームで固定
