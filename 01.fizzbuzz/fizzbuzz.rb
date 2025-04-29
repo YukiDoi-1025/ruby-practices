@@ -1,7 +1,6 @@
 #!/usr/bin/env ruby
 
-20.times do |t|
-  time = t + 1
+(1..20).each do |time|
   if time % 15 == 0
     puts "FizzBuzz"
   elsif time % 3 == 0
