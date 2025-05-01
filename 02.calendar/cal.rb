@@ -4,44 +4,29 @@ require 'optparse'
 require 'date'
 
 def make_calendar(year:, month:)
-  tmp_day = Date.new(year, month, 1)
+  day_first = Date.new(year, month, 1)
   day_last = Date.new(year, month, -1)
-  wday_first = tmp_day.wday
+  wday_first = day_first.wday
   
   wdays = "Su Mo Tu We Th Fr Sa"
-  puts tmp_day.strftime("%B %Y").center(wdays.length)
+  puts day_first.strftime("%B %Y").center(wdays.length)
   puts wdays
 
   wday_first.times{print "   "} # 1日目以前の空白を表示
   
-  while tmp_day <= day_last
-    if tmp_day.saturday?
-      puts tmp_day.strftime("%e") + " "
-    else
-      print tmp_day.strftime("%e") + " "
-    end
-    tmp_day += 1
+  (day_first..day_last).each do |date|
+    print date.day.to_s.rjust(2) + " "
+    puts if date.saturday?
   end
 end
 
 keys = {}
 opt = OptionParser.new
-opt.on('-m') {|v| v }
-opt.on('-y') {|v| v }
+opt.on('-m MONTH') {|v| v.to_i }
+opt.on('-y YEAR') {|v| v.to_i }
 opt.parse!(ARGV, into: keys)
 
-params = {}
-num = 0
-keys.each_key do |key|
-  params[key] = ARGV[num].to_i
-  num += 1
-end
+keys[:y] = Date.today.year if !keys.has_key?(:y)
+keys[:m] = Date.today.mon if !keys.has_key?(:m)
 
-if !params.has_key?(:y)
-  params[:y] = Date.today.year
-end
-if !params.has_key?(:m)
-  params[:m] = Date.today.mon
-end
-
-make_calendar(year: params[:y], month: params[:m])
+make_calendar(year: keys[:y], month: keys[:m])
