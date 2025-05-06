@@ -18,6 +18,7 @@ def make_calendar(year:, month:)
     print date.day.to_s.rjust(2) + " "
     puts if date.saturday?
   end
+  puts
 end
 
 keys = {}
