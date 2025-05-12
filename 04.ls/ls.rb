@@ -12,10 +12,10 @@ def split_file_names_by_columns(col_num)
   Array.new(col_num) { file_names.slice!(0, row_num) }
 end
 
-def display_file(split_file_names, col_num)
+def display_file(split_file_names)
   max_filename_sizes = split_file_names.map { |a| a.map(&:size).max }
   split_file_names[0].size.times do |row|
-    col_num.times do |col|
+    split_file_names.size.times do |col|
       file_name = split_file_names[col][row]
       print file_name ? "#{file_name.ljust(max_filename_sizes[col])}  " : ''
     end
@@ -27,4 +27,4 @@ opt = OptionParser.new
 opt.parse(ARGV)
 
 split_file_names = split_file_names_by_columns(COLUMN_NUMBER)
-display_file(split_file_names, COLUMN_NUMBER)
+display_file(split_file_names)
