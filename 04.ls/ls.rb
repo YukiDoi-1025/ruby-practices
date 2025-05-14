@@ -6,8 +6,8 @@ require 'optparse'
 
 COLUMN_NUMBER = 3
 
-def split_file_names_by_columns(col_num, a_option)
-  file_names = a_option ? Dir.entries('.').sort : Dir.glob('*').sort
+def split_file_names_by_columns(col_num, show_reverse_order)
+  file_names = show_reverse_order ? Dir.glob('*').sort.reverse : Dir.glob('*').sort
   row_num = (file_names.size / col_num.to_f).ceil
   Array.new(col_num) { file_names.slice!(0, row_num) }
 end
@@ -27,8 +27,8 @@ opt = OptionParser.new
 
 params = {}
 
-opt.on('-a [VAL]') { |v| v }
+opt.on('-r [VAL]') { |v| v }
 opt.parse!(ARGV, into: params)
 
-split_file_names = split_file_names_by_columns(COLUMN_NUMBER, params.key?(:a))
+split_file_names = split_file_names_by_columns(COLUMN_NUMBER, params.key?(:r))
 display_file(split_file_names)
