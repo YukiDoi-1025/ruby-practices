@@ -7,7 +7,7 @@ require 'optparse'
 COLUMN_NUMBER = 3
 
 def split_file_names_by_columns(col_num, show_reverse_order)
-  file_names = show_reverse_order ? Dir.glob('*').sort.reverse : Dir.glob('*').sort
+  file_names = show_reverse_order ? Dir.glob('*').reverse : Dir.glob('*')
   row_num = (file_names.size / col_num.to_f).ceil
   Array.new(col_num) { file_names.slice!(0, row_num) }
 end
