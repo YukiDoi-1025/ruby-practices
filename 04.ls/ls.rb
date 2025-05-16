@@ -27,8 +27,8 @@ def display_file(split_file_names)
   end
 end
 
-def add_spetial_authority(file_authorities, spetial_authority_type)
-  case spetial_authority_type
+def add_special_authority(file_authorities, special_authority_type)
+  case special_authority_type
   when '1'
     file_authorities[2][-1] = file_authorities[2][-1] == 'x' ? 't' : 'T'
   when '2'
@@ -55,7 +55,7 @@ def analyze_file_attributes(file_names)
     file_status = File.stat(file_name)
     file_mode_octal_number = file_status.mode.to_s(8).rjust(6, '0')
     file_modes = [file_mode_octal_number[0, 2]] + file_mode_octal_number[2..].chars
-    file_authorities = add_spetial_authority([FILE_AUTHORITY[file_modes[2]], FILE_AUTHORITY[file_modes[3]], FILE_AUTHORITY[file_modes[4]]], file_modes[1])
+    file_authorities = add_special_authority([FILE_AUTHORITY[file_modes[2]], FILE_AUTHORITY[file_modes[3]], FILE_AUTHORITY[file_modes[4]]], file_modes[1])
 
     total_block += (file_status.size / file_status.blksize.to_f).ceil * (file_status.blksize / UNIT_BLOCK_SIZE)
     [
