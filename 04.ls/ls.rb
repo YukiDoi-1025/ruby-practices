@@ -27,20 +27,24 @@ def display_file(split_file_names)
   end
 end
 
-def add_special_authority(file_authorities, special_authority_type)
-  case special_authority_type
-  when '1'
-    file_authorities[2][-1] = file_authorities[2][-1] == 'x' ? 't' : 'T'
-  when '2'
-    file_authorities[1][-1] = file_authorities[1][-1] == 'x' ? 's' : 'S'
-  when '4'
+def add_special_authority(file_modes)
+  file_authorities = Array.new(3) { |i| FILE_AUTHORITY[file_modes[i + 2]].dup }
+  special_authority_type_binary = file_modes[1].to_i.to_s(2).rjust(3, '0')
+
+  if special_authority_type_binary[0] == "1"
     file_authorities[0][-1] = file_authorities[0][-1] == 'x' ? 's' : 'S'
+  end
+  if special_authority_type_binary[1] == "1"
+    file_authorities[1][-1] = file_authorities[1][-1] == 'x' ? 's' : 'S'
+  end
+  if special_authority_type_binary[2] == "1"
+    file_authorities[2][-1] = file_authorities[2][-1] == 'x' ? 't' : 'T'
   end
   file_authorities
 end
 
 def calculate_maximum_file_size(file_names)
-  maximum_file_size = 0
+  maximum_file_size = 1
   file_names.each do |file_name|
     maximum_file_size = File.size(file_name) if File.size(file_name) > maximum_file_size
   end
@@ -52,12 +56,13 @@ def analyze_file_attributes(file_names)
   maximum_file_size_digit = Math.log10(calculate_maximum_file_size(file_names)).floor + 1
 
   file_attributes = file_names.map do |file_name|
-    file_status = File.stat(file_name)
+    file_status = File.symlink?(file_name) ? File.lstat(file_name) : File.stat(file_name)
     file_mode_octal_number = file_status.mode.to_s(8).rjust(6, '0')
     file_modes = [file_mode_octal_number[0, 2]] + file_mode_octal_number[2..].chars
-    file_authorities = add_special_authority([FILE_AUTHORITY[file_modes[2]], FILE_AUTHORITY[file_modes[3]], FILE_AUTHORITY[file_modes[4]]], file_modes[1])
+    file_authorities = add_special_authority(file_modes)
 
-    total_block += (file_status.size / file_status.blksize.to_f).ceil * (file_status.blksize / UNIT_BLOCK_SIZE)
+    file_block = (file_status.size / file_status.blksize.to_f).ceil * (file_status.blksize / UNIT_BLOCK_SIZE)
+    total_block += File.symlink?(file_name) ? 0 : file_block
     [
       FILE_TYPE[file_modes[0]] + file_authorities.join,
       file_status.nlink,
@@ -66,7 +71,7 @@ def analyze_file_attributes(file_names)
       file_status.size.to_s.rjust(maximum_file_size_digit),
       "#{file_status.mtime.strftime('%b ')}#{file_status.mtime.day.to_s.rjust(2)} " \
         "#{file_status.mtime.hour.to_s.rjust(2, '0')}:#{file_status.mtime.min.to_s.rjust(2, '0')}",
-      file_name
+      File.symlink?(file_name) ? "#{file_name} -> #{File.readlink(file_name)}" : file_name
     ]
   end
   [total_block, file_attributes]
