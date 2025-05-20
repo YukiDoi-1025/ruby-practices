@@ -3,8 +3,13 @@
 # frozen_string_literal: true
 
 require 'optparse'
+require 'etc'
 
 COLUMN_NUMBER = 3
+UNIT_BLOCK_SIZE = 1024
+FILE_TYPE = { '01' => 'p', '02' => 'c', '04' => 'd', '06' => 'b', '10' => '-', '12' => 'l', '14' => 's' }.freeze
+FILE_AUTHORITY = { '0' => '---', '1' => '--x', '2' => '-w-', '3' => '-wx', '4' => 'r--', '5' => 'r-x', '6' => 'rw-', '7' => 'rwx' }.freeze
+FILE_SPECIAL_AUTHORITIES = [{ mask: 0b100, type: 's' }, { mask: 0b010, type: 's' }, { mask: 0b001, type: 't' }].freeze
 
 def split_file_names_by_columns(col_num, show_reverse_order)
   file_names = show_reverse_order ? Dir.glob('*').reverse : Dir.glob('*')
@@ -23,12 +28,56 @@ def display_file(split_file_names)
   end
 end
 
+def add_special_authority(file_modes)
+  file_authorities = Array.new(3) { |i| FILE_AUTHORITY[file_modes[i + 2]].dup }
+  special_authority_type = file_modes[1].to_i
+
+  FILE_SPECIAL_AUTHORITIES.each_with_index do |file_special_authority, index|
+    if special_authority_type.anybits?(file_special_authority[:mask])
+      file_authorities[index][-1] = file_modes[index + 2].to_i.anybits?(0b001) ? file_special_authority[:type] : file_special_authority[:type].upcase
+    end
+  end
+  file_authorities
+end
+
+def analyze_file_attributes(file_names)
+  total_block = 0
+  maximum_file_size_digit = file_names.map { |file_name| File.size(file_name).to_s.length }.max
+
+  file_attributes = file_names.map do |file_name|
+    file_status = File.lstat(file_name)
+    file_mode_octal_number = file_status.mode.to_s(8).rjust(6, '0')
+    file_modes = [file_mode_octal_number[0, 2]] + file_mode_octal_number[2..].chars
+    file_authorities = add_special_authority(file_modes)
+    mtime = file_status.mtime
+
+    total_block += File.symlink?(file_name) ? 0 : (file_status.size / file_status.blksize.to_f).ceil * (file_status.blksize / UNIT_BLOCK_SIZE)
+    [
+      FILE_TYPE[file_modes[0]] + file_authorities.join,
+      file_status.nlink,
+      Etc.getpwuid(file_status.uid).name,
+      Etc.getgrgid(file_status.gid).name,
+      file_status.size.to_s.rjust(maximum_file_size_digit),
+      "#{mtime.strftime('%b ')}#{mtime.day.to_s.rjust(2)} #{mtime.hour.to_s.rjust(2, '0')}:#{mtime.min.to_s.rjust(2, '0')}",
+      File.symlink?(file_name) ? "#{file_name} -> #{File.readlink(file_name)}" : file_name
+    ]
+  end
+  [total_block, file_attributes]
+end
+
 opt = OptionParser.new
 
 params = {}
 
-opt.on('-r [VAL]') { |v| v }
+opt.on('-l [VAL]') { |v| v }
 opt.parse!(ARGV, into: params)
 
-split_file_names = split_file_names_by_columns(COLUMN_NUMBER, params.key?(:r))
-display_file(split_file_names)
+if params.key?(:l)
+  file_names = Dir.glob('*')
+  total_block, file_attributes = analyze_file_attributes(file_names)
+  puts "total #{total_block}"
+  file_attributes.each { |file_attribute| puts file_attribute.join(' ') }
+else
+  split_file_names = split_file_names_by_columns(COLUMN_NUMBER, params.key?(:r))
+  display_file(split_file_names)
+end
