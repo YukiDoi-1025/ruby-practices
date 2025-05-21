@@ -68,12 +68,10 @@ opt = OptionParser.new
 
 params = {}
 
-opt.on('-a [VAL]') { |v| v }
-opt.on('-r [VAL]') { |v| v }
-opt.on('-l [VAL]') { |v| v }
-opt.parse(ARGV)
-
-ARGV.each { |param| param.to_s.chars.each { |param_character| params[param_character.to_sym] = true } }
+opt.on('-a') { |v| v }
+opt.on('-r') { |v| v }
+opt.on('-l') { |v| v }
+opt.parse!(ARGV, into: params)
 
 file_names = params.key?(:a) ? Dir.entries('.').sort : Dir.glob('*')
 file_names.reverse! if params.key?(:r)
