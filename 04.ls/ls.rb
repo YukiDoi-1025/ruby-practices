@@ -11,8 +11,7 @@ FILE_TYPE = { '01' => 'p', '02' => 'c', '04' => 'd', '06' => 'b', '10' => '-', '
 FILE_AUTHORITY = { '0' => '---', '1' => '--x', '2' => '-w-', '3' => '-wx', '4' => 'r--', '5' => 'r-x', '6' => 'rw-', '7' => 'rwx' }.freeze
 FILE_SPECIAL_AUTHORITIES = [{ mask: 0b100, type: 's' }, { mask: 0b010, type: 's' }, { mask: 0b001, type: 't' }].freeze
 
-def split_file_names_by_columns(col_num, show_reverse_order)
-  file_names = show_reverse_order ? Dir.glob('*').reverse : Dir.glob('*')
+def split_file_names_by_columns(file_names, col_num)
   row_num = (file_names.size / col_num.to_f).ceil
   Array.new(col_num) { file_names.slice!(0, row_num) }
 end
@@ -43,18 +42,18 @@ end
 def analyze_file_attributes(file_names)
   total_block = 0
   maximum_file_size_digit = file_names.map { |file_name| File.size(file_name).to_s.length }.max
+  maximum_nlink_digit = file_names.map { |file_name| File.lstat(file_name).nlink.to_s.length }.max
 
   file_attributes = file_names.map do |file_name|
     file_status = File.lstat(file_name)
     file_mode_octal_number = file_status.mode.to_s(8).rjust(6, '0')
     file_modes = [file_mode_octal_number[0, 2]] + file_mode_octal_number[2..].chars
-    file_authorities = add_special_authority(file_modes)
     mtime = file_status.mtime
 
     total_block += File.symlink?(file_name) ? 0 : (file_status.size / file_status.blksize.to_f).ceil * (file_status.blksize / UNIT_BLOCK_SIZE)
     [
-      FILE_TYPE[file_modes[0]] + file_authorities.join,
-      file_status.nlink,
+      FILE_TYPE[file_modes[0]] + add_special_authority(file_modes).join,
+      file_status.nlink.to_s.rjust(maximum_nlink_digit),
       Etc.getpwuid(file_status.uid).name,
       Etc.getgrgid(file_status.gid).name,
       file_status.size.to_s.rjust(maximum_file_size_digit),
@@ -69,15 +68,19 @@ opt = OptionParser.new
 
 params = {}
 
-opt.on('-l [VAL]') { |v| v }
+opt.on('-a') { |v| v }
+opt.on('-r') { |v| v }
+opt.on('-l') { |v| v }
 opt.parse!(ARGV, into: params)
 
+file_names = params.key?(:a) ? Dir.entries('.').sort : Dir.glob('*')
+file_names.reverse! if params.key?(:r)
+
 if params.key?(:l)
-  file_names = Dir.glob('*')
   total_block, file_attributes = analyze_file_attributes(file_names)
   puts "total #{total_block}"
   file_attributes.each { |file_attribute| puts file_attribute.join(' ') }
 else
-  split_file_names = split_file_names_by_columns(COLUMN_NUMBER, params.key?(:r))
+  split_file_names = split_file_names_by_columns(file_names, COLUMN_NUMBER)
   display_file(split_file_names)
 end
