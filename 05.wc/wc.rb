@@ -26,10 +26,8 @@ opt.on('-w') { |v| v }
 opt.on('-c') { |v| v }
 opt.parse!(ARGV, into: params)
 
-all_count_results = if FileTest.pipe?($stdin)
+all_count_results = if ARGV.empty?
                       [word_count($stdin.readlines)]
-                    elsif ARGV.empty?
-                      [word_count(readlines)]
                     else
                       ARGV.map do |file_name|
                         File.open(file_name) do |file|
