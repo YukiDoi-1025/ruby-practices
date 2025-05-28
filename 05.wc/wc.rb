@@ -28,6 +28,8 @@ opt.parse!(ARGV, into: params)
 
 all_count_results = if FileTest.pipe?($stdin)
                       [word_count($stdin.readlines)]
+                    elsif ARGV.empty?
+                      [word_count(readlines)]
                     else
                       ARGV.map do |file_name|
                         File.open(file_name) do |file|
@@ -42,17 +44,17 @@ OPTION_KEY.each_value do |result_key|
   total_count_results[result_key] = all_count_results.sum { |optioned_count_result| optioned_count_result[result_key] }
 end
 
-total_size_digit = FileTest.pipe?($stdin) ? 7 : total_count_results.max_by { |a| a[1] }[1].to_s.size
+total_size_digit = if params.size == 1 && ARGV.size <= 1
+                     0
+                   elsif ARGV.empty?
+                     7
+                   else
+                     total_count_results.max_by { |a| a[1] }[1].to_s.size
+                   end
 
-all_count_results.map do |optioned_count_result|
+all_count_results.each do |optioned_count_result|
   OPTION_KEY.each do |option, result_key|
-    if params.key?(option) || params.empty?
-      if FileTest.pipe?($stdin) && params.size == 1
-        print optioned_count_result[result_key]
-      else
-        print "#{optioned_count_result[result_key].to_s.rjust(total_size_digit)} "
-      end
-    end
+    print "#{optioned_count_result[result_key].to_s.rjust(total_size_digit)} " if params.key?(option) || params.empty?
   end
   puts optioned_count_result[:name]
 end
